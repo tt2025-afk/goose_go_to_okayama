@@ -246,15 +246,15 @@
         </div>
     </div>
 
-    <!-- Settlement Modal -->
+    <!-- Settlement Modal (UI Fix: Added sm:max-h-[85vh] to prevent overflow on desktop) -->
     <div id="modal-settlement" class="fixed inset-0 bg-black/50 hidden z-50 flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-300">
-        <div class="bg-white w-full max-w-md h-[80vh] sm:h-auto sm:rounded-3xl rounded-t-3xl p-6 transform translate-y-full transition-transform duration-300 flex flex-col" id="modal-settlement-content">
-            <div class="flex justify-between items-center mb-6">
+        <div class="bg-white w-full max-w-md h-[80vh] sm:h-auto sm:max-h-[85vh] sm:rounded-3xl rounded-t-3xl p-6 transform translate-y-full transition-transform duration-300 flex flex-col" id="modal-settlement-content">
+            <div class="flex justify-between items-center mb-6 flex-shrink-0">
                 <h3 class="text-xl font-bold text-earth-900">結算清單</h3>
                 <button onclick="closeModal('modal-settlement')" class="text-earth-400 hover:text-earth-800"><i class="fa-solid fa-xmark text-2xl"></i></button>
             </div>
             
-            <div class="bg-earth-50 p-4 rounded-xl mb-4">
+            <div class="bg-earth-50 p-4 rounded-xl mb-4 flex-shrink-0">
                 <label class="block text-xs font-bold text-earth-500 mb-2">匯率設定 (JPY → TWD)</label>
                 <div class="flex items-center gap-2">
                     <input type="number" id="settle-rate" value="0.23" step="0.001" class="flex-1 min-w-0 p-3 rounded-xl border border-earth-200 text-lg font-bold text-earth-800 focus:outline-none focus:border-sage-500" placeholder="0.23">
