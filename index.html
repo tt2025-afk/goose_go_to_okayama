@@ -3,94 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>宮崎家族旅遊規劃</title>
+    <title>宮崎家族旅遊 (雲端協作版)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- SortableJS for Drag and Drop -->
+    <!-- SortableJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     
+    <!-- Firebase SDKs (版本 9.x - Compat版方便直接引入) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        earth: {
-                            50: '#fbfaf9',
-                            100: '#f5f3f0', // 背景淺色
-                            200: '#e8e4de',
-                            300: '#d6cec4',
-                            400: '#bgb0a0',
-                            500: '#9c8e7a', // 主大地色
-                            600: '#857662',
-                            700: '#6d6050',
-                            800: '#5a5044', // 深文字
-                            900: '#4a423a',
-                        },
-                        sage: {
-                            100: '#edf2ed',
-                            500: '#84a98c', // 綠色點綴
-                            600: '#6d8c74',
-                        }
+                        earth: { 50:'#fbfaf9', 100:'#f5f3f0', 200:'#e8e4de', 300:'#d6cec4', 400:'#bgb0a0', 500:'#9c8e7a', 600:'#857662', 700:'#6d6050', 800:'#5a5044', 900:'#4a423a' },
+                        sage: { 100:'#edf2ed', 500:'#84a98c', 600:'#6d8c74' }
                     },
-                    fontFamily: {
-                        sans: ['Noto Sans TC', 'sans-serif'],
-                    }
+                    fontFamily: { sans: ['Noto Sans TC', 'sans-serif'] }
                 }
             }
         }
     </script>
     <style>
-        body {
-            background-color: #f5f3f0; /* earth-100 */
-            -webkit-tap-highlight-color: transparent;
-        }
-        /* 隱藏 Scrollbar 但保留功能 */
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .date-card.active {
-            background-color: #5a5044; /* earth-800 */
-            color: white;
-            transform: scale(1.05);
-        }
-        .fab-btn {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        /* Dragging styles */
-        .sortable-ghost {
-            opacity: 0.4;
-            background-color: #e8e4de;
-        }
-        .sortable-drag {
-            cursor: grabbing;
-        }
-        .drag-handle {
-            touch-action: none; /* Prevent scroll when touching handle */
+        body { background-color: #f5f3f0; -webkit-tap-highlight-color: transparent; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .date-card.active { background-color: #5a5044; color: white; transform: scale(1.05); }
+        .fab-btn { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .sortable-ghost { opacity: 0.4; background-color: #e8e4de; }
+        .sortable-drag { cursor: grabbing; }
+        .drag-handle { touch-action: none; }
+        
+        /* 載入中遮罩 */
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; items-center: center;
+            transition: opacity 0.5s;
         }
     </style>
 </head>
 <body class="text-earth-800 h-screen flex flex-col overflow-hidden max-w-md mx-auto bg-white shadow-2xl relative">
 
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <i class="fa-solid fa-cloud-arrow-down text-4xl text-earth-500 animate-bounce mb-4"></i>
+        <p class="text-earth-800 font-bold">正在連線雲端資料庫...</p>
+        <p class="text-xs text-earth-400 mt-2">首次使用請確保已填入 API Key</p>
+    </div>
+
     <!-- Header & Weather -->
-    <header class="bg-earth-100 p-6 pb-2 rounded-b-3xl z-10 shadow-sm flex-shrink-0">
+    <header class="bg-earth-100 p-6 pb-2 rounded-b-3xl z-10 shadow-sm flex-shrink-0 relative">
         <div class="flex justify-between items-start mb-4">
             <div>
                 <h2 class="text-sm text-earth-600 tracking-widest uppercase mb-1">Miyazaki Trip</h2>
-                <h1 class="text-2xl font-bold text-earth-900">宮崎家族旅遊</h1>
+                <h1 class="text-2xl font-bold text-earth-900">宮崎家族旅遊 <i class="fa-solid fa-cloud text-xs text-sage-500 ml-1" title="雲端同步中"></i></h1>
             </div>
-            <div class="bg-white px-3 py-2 rounded-xl shadow-sm flex items-center gap-2">
-                <i class="fa-solid fa-sun text-orange-400 text-xl"></i>
-                <div>
-                    <div class="text-xs text-gray-400">宮崎縣</div>
-                    <div class="font-bold text-earth-800" id="weather-temp">29°C</div>
+            
+            <div class="flex gap-2">
+                <div class="bg-white px-3 py-2 rounded-xl shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-sun text-orange-400 text-xl"></i>
+                    <div>
+                        <div class="text-xs text-gray-400">宮崎縣</div>
+                        <div class="font-bold text-earth-800" id="weather-temp">29°C</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -108,7 +90,7 @@
         <div id="view-itinerary" class="block animate-fade-in">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-bold text-lg text-earth-800">當日行程</h3>
-                <span class="text-xs bg-earth-200 px-2 py-1 rounded text-earth-700" id="current-date-display">8/21 (三)</span>
+                <span class="text-xs bg-earth-200 px-2 py-1 rounded text-earth-700" id="current-date-display">8/21 (五)</span>
             </div>
             
             <div class="relative border-l-2 border-earth-200 ml-3 space-y-6" id="itinerary-list">
@@ -166,7 +148,7 @@
         </button>
     </nav>
 
-    <!-- Modal: Add/Edit Itinerary -->
+    <!-- Modals (Itinerary, Expense, Members, Settlement) - Same structure as before -->
     <div id="modal-itinerary" class="fixed inset-0 bg-black/50 hidden z-50 flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 transform translate-y-full transition-transform duration-300" id="modal-itinerary-content">
             <div class="flex justify-between items-center mb-6">
@@ -190,19 +172,16 @@
                         <input type="text" id="input-location" placeholder="例：Miyazaki Aoshima" class="w-full bg-earth-50 p-3 pl-10 rounded-xl border-none focus:ring-2 focus:ring-earth-500 outline-none">
                     </div>
                 </div>
-                <!-- 備註欄位 -->
                 <div>
                     <label class="block text-xs font-bold text-earth-500 mb-1">備註</label>
                     <textarea id="input-notes" placeholder="例：記得帶防蚊液、門票¥500" class="w-full bg-earth-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-earth-500 outline-none h-20 resize-none"></textarea>
                 </div>
-                
                 <button type="submit" class="w-full bg-earth-800 text-white py-4 rounded-xl font-bold shadow-md hover:bg-earth-900 mt-2">儲存行程</button>
                 <button type="button" id="btn-delete-itinerary" class="hidden w-full bg-red-50 text-red-500 py-3 rounded-xl font-bold mt-2">刪除此行程</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal: Add Expense -->
     <div id="modal-expense" class="fixed inset-0 bg-black/50 hidden z-50 flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 transform translate-y-full transition-transform duration-300" id="modal-expense-content">
             <div class="flex justify-between items-center mb-6">
@@ -214,15 +193,10 @@
                     <label class="block text-xs font-bold text-earth-500 mb-1">項目</label>
                     <input type="text" id="exp-title" placeholder="例：午餐 - 宮崎牛" class="w-full bg-earth-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-sage-500 outline-none" required>
                 </div>
-                
-                <!-- 新增：付款人 -->
                 <div>
                     <label class="block text-xs font-bold text-earth-500 mb-1">誰先付錢？</label>
-                    <select id="exp-payer" class="w-full bg-earth-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-sage-500 outline-none text-sm">
-                        <!-- populated by js -->
-                    </select>
+                    <select id="exp-payer" class="w-full bg-earth-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-sage-500 outline-none text-sm"></select>
                 </div>
-
                 <div class="flex gap-4">
                     <div class="flex-1">
                         <label class="block text-xs font-bold text-earth-500 mb-1">金額 (¥)</label>
@@ -230,35 +204,27 @@
                     </div>
                     <div class="w-1/3">
                         <label class="block text-xs font-bold text-earth-500 mb-1">日期</label>
-                         <select id="exp-date" class="w-full bg-earth-50 p-3 rounded-xl border-none outline-none text-sm">
-                            <!-- populated by js -->
-                        </select>
+                         <select id="exp-date" class="w-full bg-earth-50 p-3 rounded-xl border-none outline-none text-sm"></select>
                     </div>
                 </div>
-                
                 <div>
                     <div class="flex justify-between items-end mb-2">
-                        <label class="block text-xs font-bold text-earth-500">分帳成員 (誰需要付錢)</label>
+                        <label class="block text-xs font-bold text-earth-500">分帳成員</label>
                         <button type="button" onclick="toggleAllMembers()" id="btn-toggle-members" class="text-xs text-sage-600 font-bold hover:bg-sage-100 px-2 py-0.5 rounded transition-colors">取消全選</button>
                     </div>
-                    <div class="grid grid-cols-3 gap-2" id="split-members-container">
-                        <!-- populated by js -->
-                    </div>
+                    <div class="grid grid-cols-3 gap-2" id="split-members-container"></div>
                 </div>
-
                 <button type="submit" class="w-full bg-sage-500 text-white py-4 rounded-xl font-bold shadow-md hover:bg-sage-600 mt-2">新增紀錄</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal: Settlement -->
     <div id="modal-settlement" class="fixed inset-0 bg-black/50 hidden z-50 flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-300">
-        <div class="bg-white w-full max-w-md h-[80vh] sm:h-auto sm:rounded-3xl rounded-t-3xl p-6 transform translate-y-full transition-all duration-300 flex flex-col" id="modal-settlement-content">
+        <div class="bg-white w-full max-w-md h-[80vh] sm:h-auto sm:rounded-3xl rounded-t-3xl p-6 transform translate-y-full sm:translate-y-0 sm:scale-95 transition-all duration-300 flex flex-col" id="modal-settlement-content">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-earth-900">結算清單</h3>
                 <button onclick="closeModal('modal-settlement')" class="text-earth-400 hover:text-earth-800"><i class="fa-solid fa-xmark text-2xl"></i></button>
             </div>
-            
             <div class="bg-earth-50 p-4 rounded-xl mb-4">
                 <label class="block text-xs font-bold text-earth-500 mb-1">匯率 (JPY → TWD)</label>
                 <div class="flex gap-2">
@@ -266,24 +232,14 @@
                     <button onclick="renderSettlement()" class="bg-sage-500 text-white px-4 py-2 rounded font-bold hover:bg-sage-600">計算</button>
                 </div>
             </div>
-
-            <div class="flex-1 overflow-y-auto pr-1" id="settlement-results">
-                <!-- Results will appear here -->
-            </div>
-
-            <div class="mt-4 text-center text-xs text-earth-400">
-                *計算方式採自動平衡演算法，減少轉帳次數
-            </div>
+            <div class="flex-1 overflow-y-auto pr-1" id="settlement-results"></div>
         </div>
     </div>
 
-    <!-- Modal: Manage Members -->
     <div id="modal-members" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="bg-white w-3/4 max-w-sm rounded-2xl p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="modal-members-content">
             <h3 class="text-lg font-bold text-earth-900 mb-4">編輯成員</h3>
-            <div id="members-list" class="space-y-2 mb-4">
-                <!-- List -->
-            </div>
+            <div id="members-list" class="space-y-2 mb-4"></div>
             <div class="flex gap-2">
                 <input type="text" id="new-member-name" placeholder="新成員名字" class="flex-1 bg-earth-50 p-2 rounded border border-earth-200 text-sm">
                 <button onclick="addMember()" class="bg-earth-800 text-white px-3 rounded text-sm"><i class="fa-solid fa-plus"></i></button>
@@ -295,6 +251,22 @@
     </div>
 
     <script>
+        // ==========================================
+        // ⚠️ 重要：請在此處填入您的 Firebase 設定
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEfhniotkKkTVllevVcULi1p7HXn79GGg",
+            authDomain: "miyazakitrip-acec0.firebaseapp.com",
+            projectId: "miyazakitrip-acec0",
+            storageBucket: "miyazakitrip-acec0.firebasestorage.app",
+            messagingSenderId: "681143086518",
+            appId: "1:681143086518:web:a471a2893bba96cb3d6517"
+        };
+        // ==========================================
+
+        let db;
+        let unsubscribe; // Listener detach function
+
         // --- Data & State ---
         const tripDates = [
             { date: '2025-08-21', label: '8/21', day: '五' },
@@ -303,59 +275,100 @@
             { date: '2025-08-24', label: '8/24', day: '一' },
         ];
 
-        // Initial Data (Simulated DB)
-        // Fixed: Ensure all IDs are unique for CRUD/Sortable to work correctly
-        const defaultItinerary = [
-            { id: 1, date: '2025-08-21', time: '06:20', title: '桃園機場起飛', location: 'Taoyuan Airport', notes: '虎航IT742' },
-            { id: 2, date: '2025-08-21', time: '09:20', title: '抵達宮崎機場', location: 'Miyazaki Airport', notes: '' },
-            { id: 3, date: '2025-08-21', time: '10:00', title: '取車', location: '', notes: '#待找租車' },
-            { id: 4, date: '2025-08-21', time: '11:30', title: '青島神社 & 鬼之洗衣板', location: 'Aoshima Shrine', notes: '(車程15分鐘)走過彌生橋，欣賞獨特的地質奇觀。神社內可祈求姻緣與平安，氛圍悠閒，非常適合全家散步。' },
-            { id: 5, date: '2025-08-21', time: '13:00', title: '午餐：宮崎牛', location: 'Miyazaki Beef Teppanyaki', notes: '#待找' },
-            { id: 6, date: '2025-08-21', time: '15:00', title: '宮崎市鳳凰自然動物園', location: 'Miyazaki City Phoenix Zoo', notes: '這裡有著名的火烈鳥秀，且坡度平緩，適合 2-3 歲的小孩放電' },
-            { id: 7, date: '2025-08-21', time: '18:00', title: '飯店check-in', location: '', notes: '#待找' },
-            { id: 8, date: '2025-08-22', time: '09:00', title: '出發前往高千穗', location: 'Takachiho Gorge', notes: '車程約2小時，準備暈車藥' },
-            { id: 9, date: '2025-08-22', time: '11:00', title: '高千穗天照大神鐵道', location: 'Takachiho Gorge', notes: '搭乘由舊鐵道改建的小火車，高度達 105 公尺，穿梭在山谷間，大人小孩都會覺得很新奇。' },
-            { id: 10, date: '2025-08-22', time: '12:30', title: '午餐：千穗之家', location: ' Chiho no Ie', notes: '推薦流水麵體驗高千穗特色' },
-            { id: 11, date: '2025-08-22', time: '11:00', title: '高千穗峽划船', location: 'Takachiho Gorge Boat Rental', notes: '每艘船限乘3人，費用¥3000' },
-            { id: 12, date: '2025-08-22', time: '19:00', title: '回宮崎市區', location: '', notes: '#晚餐待定' },
-            { id: 13, date: '2025-08-23', time: '09:30', title: 'Sun Messe 日南 (摩艾石像)', location: 'Sun Messe Nichinan', notes: '門票：成人¥800' },
-            { id: 14, date: '2025-08-23', time: '12:30', title: '午餐：待定', location: '', notes: '推薦日南海岸海鮮料理' },
-            { id: 15, date: '2025-08-23', time: '14:00', title: '鵜戶神宮', location: 'Udo Shrine', notes: '位於海邊天然洞窟內的神社。一定要體驗「投運玉」，丟進龜背上的洞口就能許願，充滿樂趣' },
-            { id: 16, date: '2025-08-23', time: '16:00', title: '飫肥城下町', location: 'Obi Castle Town', notes: '漫步「九州小京都」，可以買「邊吃邊逛地圖券」，換取當地特色小吃' },
-            { id: 17, date: '2025-08-24', time: '10:30', title: '宮崎機場起飛', location: 'Miyazaki Airport', notes: '虎航IT743' },
-            { id: 18, date: '2025-08-24', time: '11:55', title: '抵達桃園機場', location: 'Taoyuan Airport', notes: '' },
-        ];
-
-        const defaultMembers = ['媽媽', '大哥', '小毛', '翔哥', '筱葳', '耀哥', '筱婷', '寧寧', '志愷'];
+        // Default Data (Used only if DB is empty)
+        const defaultData = {
+            itinerary: [
+                { id: 1, date: '2025-08-21', time: '06:20', title: '桃園機場起飛', location: 'Taoyuan Airport', notes: '虎航IT742' },
+                { id: 2, date: '2025-08-21', time: '09:20', title: '抵達宮崎機場', location: 'Miyazaki Airport', notes: '' },
+            ],
+            expenses: [],
+            members: ['媽媽', '大哥', '小毛', '翔哥', '筱葳', '耀哥', '筱婷', '寧寧', '志愷']
+        };
 
         // App State
         let state = {
             currentDate: tripDates[0].date,
-            currentView: 'itinerary', // 'itinerary' or 'accounting'
-            itinerary: JSON.parse(localStorage.getItem('my_trip_itinerary')) || defaultItinerary,
-            expenses: JSON.parse(localStorage.getItem('my_trip_expenses')) || [],
-            members: JSON.parse(localStorage.getItem('my_trip_members')) || defaultMembers,
+            currentView: 'itinerary', 
+            itinerary: [],
+            expenses: [],
+            members: [],
         };
         
-        // Sortable Instance
         let sortableInstance = null;
 
-        // --- Core Functions ---
+        // --- Initialization ---
 
         function init() {
-            renderDateSlider();
-            renderItinerary();
-            renderExpenses();
-            updateWeather(state.currentDate);
-            populateDateSelect();
-            populatePayerSelect(); // New
+            // Check if Firebase config is set placeholder
+            if (firebaseConfig.apiKey.includes("請填入")) {
+                alert("⚠️ 請注意：您尚未設定 Firebase API Key。\n請用文字編輯器打開此 HTML 檔案，填入您的設定，否則無法使用雲端同步功能。");
+                document.getElementById('loading-overlay').style.display = 'none';
+                return;
+            }
+
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                setupRealtimeListener();
+            } catch (e) {
+                console.error("Firebase init error", e);
+                alert("連線失敗，請檢查 Config 設定");
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
         }
 
+        // --- Firebase Realtime Sync ---
+        
+        function setupRealtimeListener() {
+            // We store everything in a single document 'data' inside collection 'miyazaki_trip'
+            // In a real app, you might split collections, but for this scale, one doc is fine and efficient (1 read per sync)
+            unsubscribe = db.collection('trips').doc('miyazaki_v1').onSnapshot((doc) => {
+                const overlay = document.getElementById('loading-overlay');
+                if (overlay) overlay.style.opacity = '0';
+                setTimeout(() => { if(overlay) overlay.style.display = 'none'; }, 500);
+
+                if (doc.exists) {
+                    const data = doc.data();
+                    state.itinerary = data.itinerary || [];
+                    state.expenses = data.expenses || [];
+                    state.members = data.members || [];
+                    
+                    // Refresh UI
+                    renderItinerary();
+                    renderExpenses();
+                    populateDateSelect();
+                    populatePayerSelect();
+                } else {
+                    // Initialize DB with defaults if first time
+                    db.collection('trips').doc('miyazaki_v1').set(defaultData);
+                }
+            }, (error) => {
+                console.error("Sync error:", error);
+                alert("同步失敗: " + error.message);
+            });
+
+            // Initial UI setup
+            renderDateSlider();
+            updateWeather(state.currentDate);
+        }
+
+        // --- Save Data (Push to Cloud) ---
         function saveData() {
-            localStorage.setItem('my_trip_itinerary', JSON.stringify(state.itinerary));
-            localStorage.setItem('my_trip_expenses', JSON.stringify(state.expenses));
-            localStorage.setItem('my_trip_members', JSON.stringify(state.members));
-            renderExpenses();
+            if (!db) return;
+            // Debounce could be added here, but direct write is fine for low frequency
+            db.collection('trips').doc('miyazaki_v1').update({
+                itinerary: state.itinerary,
+                expenses: state.expenses,
+                members: state.members
+            }).catch(err => {
+                console.error("Save error", err);
+                // Fallback: Try set if doc doesn't exist
+                db.collection('trips').doc('miyazaki_v1').set({
+                    itinerary: state.itinerary,
+                    expenses: state.expenses,
+                    members: state.members
+                });
+            });
         }
 
         // --- Weather Simulation ---
@@ -364,28 +377,22 @@
             const temp = 28 + (Math.abs(hash) % 6);
             const conditions = ['fa-sun', 'fa-cloud-sun', 'fa-cloud-showers-heavy'];
             const condIcon = conditions[Math.abs(hash) % 3];
-            
             document.getElementById('weather-temp').innerText = `${temp}°C`;
             const iconEl = document.querySelector('.fa-sun, .fa-cloud-sun, .fa-cloud-showers-heavy');
-            if(iconEl) {
-                iconEl.className = `fa-solid ${condIcon} text-orange-400 text-xl`;
-            }
+            if(iconEl) iconEl.className = `fa-solid ${condIcon} text-orange-400 text-xl`;
         }
 
         // --- UI Rendering ---
+        // (Almost identical to previous version, just removing localStorage calls)
 
         function renderDateSlider() {
             const container = document.getElementById('date-slider');
             container.innerHTML = '';
-            
             tripDates.forEach(d => {
                 const isActive = d.date === state.currentDate;
                 const el = document.createElement('div');
                 el.className = `date-card flex-shrink-0 w-16 h-20 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 snap-center ${isActive ? 'active shadow-lg' : 'bg-white text-earth-400 border border-earth-100'}`;
-                el.innerHTML = `
-                    <span class="text-xs font-medium">${d.label}</span>
-                    <span class="text-lg font-bold mt-1">${d.day}</span>
-                `;
+                el.innerHTML = `<span class="text-xs font-medium">${d.label}</span><span class="text-lg font-bold mt-1">${d.day}</span>`;
                 el.onclick = () => {
                     state.currentDate = d.date;
                     renderDateSlider();
@@ -401,43 +408,32 @@
         function renderItinerary() {
             const list = document.getElementById('itinerary-list');
             list.innerHTML = '';
-            
-            const dailyItems = state.itinerary
-                .filter(i => i.date === state.currentDate);
+            const dailyItems = state.itinerary.filter(i => i.date === state.currentDate);
 
             if (dailyItems.length === 0) {
                 document.getElementById('empty-itinerary').classList.remove('hidden');
             } else {
                 document.getElementById('empty-itinerary').classList.add('hidden');
-                
                 dailyItems.forEach(item => {
                     const el = document.createElement('div');
                     el.className = 'relative pl-0 pb-2 group flex items-start';
                     el.setAttribute('data-id', item.id);
                     const mapLink = item.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}` : '#';
-                    const notesHtml = item.notes 
-                        ? `<div class="mt-2 text-xs text-earth-600 bg-earth-100 p-2 rounded-lg"><i class="fa-regular fa-note-sticky mr-1"></i>${item.notes}</div>` 
-                        : '';
-
+                    const notesHtml = item.notes ? `<div class="mt-2 text-xs text-earth-600 bg-earth-100 p-2 rounded-lg"><i class="fa-regular fa-note-sticky mr-1"></i>${item.notes}</div>` : '';
                     el.innerHTML = `
-                        <div class="drag-handle py-6 pr-2 cursor-grab text-earth-300 hover:text-earth-500">
-                            <i class="fa-solid fa-grip-lines"></i>
-                        </div>
+                        <div class="drag-handle py-6 pr-2 cursor-grab text-earth-300 hover:text-earth-500"><i class="fa-solid fa-grip-lines"></i></div>
                         <div class="flex-1 relative pl-4">
                             <div class="absolute -left-[5px] top-1 w-4 h-4 rounded-full bg-earth-500 border-4 border-white shadow-sm z-10"></div>
                             <div class="bg-earth-50 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-transparent hover:border-earth-200" onclick="openEditItinerary(${item.id})">
                                 <div class="flex justify-between items-start">
                                     <span class="text-sage-600 font-bold text-sm bg-sage-100 px-2 py-0.5 rounded-md">${item.time}</span>
-                                    <a href="${mapLink}" target="_blank" onclick="event.stopPropagation()" class="text-earth-400 hover:text-red-500 transition-colors">
-                                        <i class="fa-solid fa-map-location-dot text-lg"></i>
-                                    </a>
+                                    <a href="${mapLink}" target="_blank" onclick="event.stopPropagation()" class="text-earth-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-map-location-dot text-lg"></i></a>
                                 </div>
                                 <h4 class="font-bold text-earth-900 mt-2 text-lg">${item.title}</h4>
                                 ${item.location ? `<p class="text-xs text-earth-500 mt-1"><i class="fa-solid fa-location-dot mr-1"></i>${item.location}</p>` : ''}
                                 ${notesHtml}
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                     list.appendChild(el);
                 });
             }
@@ -447,14 +443,8 @@
         function initSortable() {
             const list = document.getElementById('itinerary-list');
             if (sortableInstance) sortableInstance.destroy();
-
             sortableInstance = new Sortable(list, {
-                animation: 150,
-                handle: '.drag-handle',
-                ghostClass: 'sortable-ghost',
-                dragClass: 'sortable-drag',
-                delay: 100,
-                delayOnTouchOnly: true,
+                animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost', dragClass: 'sortable-drag', delay: 100, delayOnTouchOnly: true,
                 onEnd: function (evt) {
                     const newOrderIds = Array.from(list.children).map(el => parseInt(el.getAttribute('data-id')));
                     const otherItems = state.itinerary.filter(i => i.date !== state.currentDate);
@@ -462,7 +452,7 @@
                     const itemsMap = new Map(currentItems.map(i => [i.id, i]));
                     const reorderedCurrentItems = newOrderIds.map(id => itemsMap.get(id)).filter(item => item !== undefined);
                     state.itinerary = [...otherItems, ...reorderedCurrentItems];
-                    saveData();
+                    saveData(); // Cloud push
                 }
             });
         }
@@ -470,27 +460,20 @@
         function renderExpenses() {
             const list = document.getElementById('expense-list');
             list.innerHTML = '';
-            
             let total = 0;
             const sortedExpenses = [...state.expenses].sort((a,b) => b.id - a.id);
-
             sortedExpenses.forEach(exp => {
                 total += parseInt(exp.amount);
                 const memberCount = exp.sharedBy.length;
                 const perPerson = memberCount > 0 ? Math.round(exp.amount / memberCount) : 0;
                 const dateObj = tripDates.find(d => d.date === exp.date);
                 const dateLabel = dateObj ? dateObj.label : exp.date.substring(5).replace('-', '/');
-                
-                // Payer Display Logic (Fallback to first member or '未知' for legacy data)
                 const payerName = exp.payer ? exp.payer : (state.members.length > 0 ? state.members[0] : '未知');
-
                 const el = document.createElement('div');
                 el.className = 'bg-white p-4 rounded-xl shadow-sm border border-earth-100 flex justify-between items-center';
                 el.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <div class="bg-sage-100 w-10 h-10 rounded-full flex items-center justify-center text-sage-600 flex-shrink-0">
-                            <i class="fa-solid fa-utensils"></i>
-                        </div>
+                        <div class="bg-sage-100 w-10 h-10 rounded-full flex items-center justify-center text-sage-600 flex-shrink-0"><i class="fa-solid fa-utensils"></i></div>
                         <div class="min-w-0">
                             <div class="font-bold text-earth-800 truncate">${exp.title}</div>
                             <div class="text-xs text-earth-400 truncate">${dateLabel} • ${payerName}墊付</div>
@@ -501,13 +484,10 @@
                         <div class="font-bold text-earth-900">¥${parseInt(exp.amount).toLocaleString()}</div>
                         <div class="text-[10px] text-earth-400">每人 ¥${perPerson.toLocaleString()}</div>
                         <button onclick="deleteExpense(${exp.id})" class="text-red-300 text-xs mt-1 hover:text-red-500">刪除</button>
-                    </div>
-                `;
+                    </div>`;
                 list.appendChild(el);
             });
-
             document.getElementById('total-expense').innerText = `¥${total.toLocaleString()}`;
-            
             const avatarContainer = document.getElementById('member-avatars');
             avatarContainer.innerHTML = '';
             state.members.forEach((m, i) => {
@@ -518,16 +498,12 @@
             });
         }
 
-        // --- Interaction Handlers ---
-
         function switchView(viewName) {
             state.currentView = viewName;
             document.getElementById('view-itinerary').className = viewName === 'itinerary' ? 'block animate-fade-in' : 'hidden';
             document.getElementById('view-accounting').className = viewName === 'accounting' ? 'block animate-fade-in' : 'hidden';
-
             const btnItin = document.getElementById('nav-itinerary');
             const btnAcc = document.getElementById('nav-accounting');
-            
             if(viewName === 'itinerary') {
                 btnItin.className = 'nav-item w-full py-2 flex flex-col items-center gap-1 text-earth-800 transition-colors';
                 btnItin.querySelector('i').className = 'fa-solid fa-map-location-dot text-xl'; 
@@ -551,7 +527,6 @@
                 openModal('modal-expense');
                 document.getElementById('form-expense').reset();
                 document.getElementById('exp-date').value = state.currentDate;
-                // Default payer to first member
                 if(state.members.length > 0) document.getElementById('exp-payer').value = state.members[0];
             }
         }
@@ -562,12 +537,8 @@
             modal.classList.remove('hidden');
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
-                if(content.classList.contains('translate-y-full')) {
-                    content.classList.remove('translate-y-full');
-                } else {
-                    content.classList.remove('scale-95');
-                    content.classList.add('scale-100');
-                }
+                if(content.classList.contains('translate-y-full')) content.classList.remove('translate-y-full');
+                else { content.classList.remove('scale-95'); content.classList.add('scale-100'); }
             }, 10);
         }
 
@@ -575,18 +546,12 @@
             const modal = document.getElementById(id);
             const content = document.getElementById(id + '-content');
             modal.classList.add('opacity-0');
-            if(!content.classList.contains('scale-100')) {
-                content.classList.add('translate-y-full');
-            } else {
-                content.classList.remove('scale-100');
-                content.classList.add('scale-95');
-            }
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
+            if(!content.classList.contains('scale-100')) content.classList.add('translate-y-full');
+            else { content.classList.remove('scale-100'); content.classList.add('scale-95'); }
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
         }
 
-        // --- Itinerary CRUD ---
+        // CRUD with Cloud Save
         document.getElementById('form-itinerary').addEventListener('submit', (e) => {
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
@@ -594,19 +559,13 @@
             const title = document.getElementById('input-title').value;
             const location = document.getElementById('input-location').value;
             const notes = document.getElementById('input-notes').value;
-            
             if (id) {
                 const index = state.itinerary.findIndex(i => i.id == id);
-                if (index > -1) {
-                    state.itinerary[index] = { ...state.itinerary[index], time, title, location, notes };
-                }
+                if (index > -1) state.itinerary[index] = { ...state.itinerary[index], time, title, location, notes };
             } else {
-                const newItem = { id: Date.now(), date: state.currentDate, time, title, location, notes };
-                state.itinerary.push(newItem);
+                state.itinerary.push({ id: Date.now(), date: state.currentDate, time, title, location, notes });
             }
-            saveData();
-            renderItinerary();
-            closeModal('modal-itinerary');
+            saveData(); closeModal('modal-itinerary');
         });
 
         function openEditItinerary(id) {
@@ -619,263 +578,90 @@
             document.getElementById('input-notes').value = item.notes || '';
             const btnDel = document.getElementById('btn-delete-itinerary');
             btnDel.classList.remove('hidden');
-            btnDel.onclick = () => {
-                if(confirm('確定刪除此行程？')) {
-                    state.itinerary = state.itinerary.filter(i => i.id !== id);
-                    saveData();
-                    renderItinerary();
-                    closeModal('modal-itinerary');
-                }
-            };
+            btnDel.onclick = () => { if(confirm('確定刪除？')) { state.itinerary = state.itinerary.filter(i => i.id !== id); saveData(); closeModal('modal-itinerary'); }};
             openModal('modal-itinerary');
         }
 
-        // --- Accounting CRUD ---
         function populateDateSelect() {
-            const sel = document.getElementById('exp-date');
-            sel.innerHTML = '';
-            tripDates.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d.date;
-                opt.text = `${d.label} (${d.day})`;
-                sel.appendChild(opt);
-            });
+            const sel = document.getElementById('exp-date'); sel.innerHTML = '';
+            tripDates.forEach(d => { const opt = document.createElement('option'); opt.value = d.date; opt.text = `${d.label} (${d.day})`; sel.appendChild(opt); });
         }
-
         function populatePayerSelect() {
-            const sel = document.getElementById('exp-payer');
-            const currentVal = sel.value;
-            sel.innerHTML = '';
-            state.members.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.text = m;
-                sel.appendChild(opt);
-            });
-            // Try to restore selection or default to first
-            if(state.members.includes(currentVal)) {
-                sel.value = currentVal;
-            } else if(state.members.length > 0) {
-                sel.value = state.members[0];
-            }
+            const sel = document.getElementById('exp-payer'); const currentVal = sel.value; sel.innerHTML = '';
+            state.members.forEach(m => { const opt = document.createElement('option'); opt.value = m; opt.text = m; sel.appendChild(opt); });
+            if(state.members.includes(currentVal)) sel.value = currentVal; else if(state.members.length > 0) sel.value = state.members[0];
         }
-
         function renderSplitMembers() {
-            const container = document.getElementById('split-members-container');
-            container.innerHTML = '';
+            const container = document.getElementById('split-members-container'); container.innerHTML = '';
             state.members.forEach(m => {
-                const label = document.createElement('label');
-                label.className = 'flex items-center space-x-2 bg-earth-50 p-2 rounded cursor-pointer select-none';
-                label.innerHTML = `
-                    <input type="checkbox" value="${m}" checked onchange="updateToggleLabel()" class="form-checkbox text-sage-600 rounded focus:ring-sage-500">
-                    <span class="text-sm text-earth-800">${m}</span>
-                `;
+                const label = document.createElement('label'); label.className = 'flex items-center space-x-2 bg-earth-50 p-2 rounded cursor-pointer select-none';
+                label.innerHTML = `<input type="checkbox" value="${m}" checked onchange="updateToggleLabel()" class="form-checkbox text-sage-600 rounded focus:ring-sage-500"><span class="text-sm text-earth-800">${m}</span>`;
                 container.appendChild(label);
             });
             updateToggleLabel();
         }
-
-        function toggleAllMembers() {
-            const checkboxes = document.querySelectorAll('#split-members-container input[type="checkbox"]');
-            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-            checkboxes.forEach(cb => cb.checked = !allChecked);
-            updateToggleLabel();
-        }
-        
-        function updateToggleLabel() {
-            const checkboxes = document.querySelectorAll('#split-members-container input[type="checkbox"]');
-            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-            const btn = document.getElementById('btn-toggle-members');
-            btn.innerText = allChecked ? '取消全選' : '全選';
-        }
+        function toggleAllMembers() { const checkboxes = document.querySelectorAll('#split-members-container input[type="checkbox"]'); const allChecked = Array.from(checkboxes).every(cb => cb.checked); checkboxes.forEach(cb => cb.checked = !allChecked); updateToggleLabel(); }
+        function updateToggleLabel() { const checkboxes = document.querySelectorAll('#split-members-container input[type="checkbox"]'); const allChecked = Array.from(checkboxes).every(cb => cb.checked); document.getElementById('btn-toggle-members').innerText = allChecked ? '取消全選' : '全選'; }
 
         document.getElementById('form-expense').addEventListener('submit', (e) => {
             e.preventDefault();
             const title = document.getElementById('exp-title').value;
-            const payer = document.getElementById('exp-payer').value; // Get Payer
+            const payer = document.getElementById('exp-payer').value;
             const amount = document.getElementById('exp-amount').value;
             const date = document.getElementById('exp-date').value;
-            
             const checkboxes = document.querySelectorAll('#split-members-container input[type="checkbox"]:checked');
             const sharedBy = Array.from(checkboxes).map(cb => cb.value);
-            
-            if (sharedBy.length === 0) {
-                alert('請至少選擇一位分帳成員');
-                return;
-            }
-
-            const newExp = {
-                id: Date.now(),
-                title,
-                payer, // Save Payer
-                amount,
-                date,
-                sharedBy
-            };
-
-            state.expenses.push(newExp);
-            saveData();
-            closeModal('modal-expense');
+            if (sharedBy.length === 0) { alert('請至少選擇一位分帳成員'); return; }
+            state.expenses.push({ id: Date.now(), title, payer, amount, date, sharedBy });
+            saveData(); closeModal('modal-expense');
         });
 
-        function deleteExpense(id) {
-            if(confirm('確定刪除此筆支出？')) {
-                state.expenses = state.expenses.filter(e => e.id !== id);
-                saveData();
-                renderExpenses();
-            }
-        }
-
-        // --- Member Management ---
-        function openMemberModal() {
-            renderMembersList();
-            openModal('modal-members');
-        }
-
+        function deleteExpense(id) { if(confirm('確定刪除？')) { state.expenses = state.expenses.filter(e => e.id !== id); saveData(); }}
+        function openMemberModal() { renderMembersList(); openModal('modal-members'); }
         function renderMembersList() {
-            const list = document.getElementById('members-list');
-            list.innerHTML = '';
+            const list = document.getElementById('members-list'); list.innerHTML = '';
             state.members.forEach((m, index) => {
-                const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-earth-50 p-2 rounded';
-                div.innerHTML = `
-                    <span class="text-earth-800">${m}</span>
-                    ${state.members.length > 1 ? `<button onclick="removeMember(${index})" class="text-red-400"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
-                `;
+                const div = document.createElement('div'); div.className = 'flex justify-between items-center bg-earth-50 p-2 rounded';
+                div.innerHTML = `<span class="text-earth-800">${m}</span>${state.members.length > 1 ? `<button onclick="removeMember(${index})" class="text-red-400"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}`;
                 list.appendChild(div);
             });
         }
+        function addMember() { const name = document.getElementById('new-member-name').value.trim(); if (name) { state.members.push(name); document.getElementById('new-member-name').value = ''; saveData(); renderMembersList(); populatePayerSelect(); }}
+        function removeMember(index) { state.members.splice(index, 1); saveData(); renderMembersList(); populatePayerSelect(); }
 
-        function addMember() {
-            const input = document.getElementById('new-member-name');
-            const name = input.value.trim();
-            if (name) {
-                state.members.push(name);
-                input.value = '';
-                saveData(); 
-                renderMembersList();
-                populatePayerSelect();
-            }
-        }
-
-        function removeMember(index) {
-            state.members.splice(index, 1);
-            saveData();
-            renderMembersList();
-            populatePayerSelect();
-        }
-
-        // --- Settlement Logic ---
-
-        function openSettlementModal() {
-            renderSettlement();
-            openModal('modal-settlement');
-        }
-
+        function openSettlementModal() { renderSettlement(); openModal('modal-settlement'); }
         function renderSettlement() {
             const rate = parseFloat(document.getElementById('settle-rate').value) || 0.22;
             const resultContainer = document.getElementById('settlement-results');
-            
-            // 1. Calculate Balances
-            // + means you paid more than your share (people owe you)
-            // - means you consumed more than you paid (you owe people)
-            let balances = {};
-            state.members.forEach(m => balances[m] = 0);
-
+            let balances = {}; state.members.forEach(m => balances[m] = 0);
             state.expenses.forEach(exp => {
-                const amount = parseInt(exp.amount);
-                // Fallback for old data without payer
-                const payer = exp.payer || (state.members.length > 0 ? state.members[0] : null);
-                
-                if (payer && balances.hasOwnProperty(payer)) {
-                     // Payer gets +Credit
-                    balances[payer] += amount;
-                }
-
+                const amount = parseInt(exp.amount); const payer = exp.payer || (state.members.length > 0 ? state.members[0] : null);
+                if (payer && balances.hasOwnProperty(payer)) balances[payer] += amount;
                 const splitCount = exp.sharedBy.length;
-                if (splitCount > 0) {
-                    const splitAmount = amount / splitCount;
-                    exp.sharedBy.forEach(member => {
-                        if(balances.hasOwnProperty(member)) {
-                            // Consumers get -Debit
-                            balances[member] -= splitAmount;
-                        }
-                    });
-                }
+                if (splitCount > 0) { const splitAmount = amount / splitCount; exp.sharedBy.forEach(member => { if(balances.hasOwnProperty(member)) balances[member] -= splitAmount; }); }
             });
-
-            // 2. Simplify Debts
-            let debtors = [];
-            let creditors = [];
-            
-            for (const [member, amount] of Object.entries(balances)) {
-                if (amount < -1) debtors.push({ member, amount }); // Using -1 to ignore tiny rounding diffs
-                if (amount > 1) creditors.push({ member, amount });
-            }
-
-            debtors.sort((a, b) => a.amount - b.amount); // Ascending (most negative first)
-            creditors.sort((a, b) => b.amount - a.amount); // Descending (most positive first)
-
-            let transactions = [];
-            let i = 0; 
-            let j = 0;
-
+            let debtors = []; let creditors = [];
+            for (const [member, amount] of Object.entries(balances)) { if (amount < -1) debtors.push({ member, amount }); if (amount > 1) creditors.push({ member, amount }); }
+            debtors.sort((a, b) => a.amount - b.amount); creditors.sort((a, b) => b.amount - a.amount);
+            let transactions = []; let i = 0; let j = 0;
             while (i < debtors.length && j < creditors.length) {
-                let debtor = debtors[i];
-                let creditor = creditors[j];
-                
-                // The amount to settle is the minimum of what debtor owes and creditor is owed
+                let debtor = debtors[i]; let creditor = creditors[j];
                 let amount = Math.min(Math.abs(debtor.amount), creditor.amount);
-                
-                transactions.push({
-                    from: debtor.member,
-                    to: creditor.member,
-                    amount: amount
-                });
-
-                debtor.amount += amount;
-                creditor.amount -= amount;
-
-                if (Math.abs(debtor.amount) < 1) i++;
-                if (creditor.amount < 1) j++;
+                transactions.push({ from: debtor.member, to: creditor.member, amount: amount });
+                debtor.amount += amount; creditor.amount -= amount;
+                if (Math.abs(debtor.amount) < 1) i++; if (creditor.amount < 1) j++;
             }
-
-            // 3. Render
             resultContainer.innerHTML = '';
-            if (transactions.length === 0) {
-                resultContainer.innerHTML = `
-                    <div class="text-center text-earth-400 py-10">
-                        <i class="fa-solid fa-check-circle text-4xl mb-2 text-sage-500"></i>
-                        <p>帳目已平衡，無需轉帳</p>
-                    </div>
-                `;
-                return;
-            }
-
+            if (transactions.length === 0) { resultContainer.innerHTML = `<div class="text-center text-earth-400 py-10"><i class="fa-solid fa-check-circle text-4xl mb-2 text-sage-500"></i><p>帳目已平衡</p></div>`; return; }
             transactions.forEach(t => {
-                const twd = Math.round(t.amount * rate);
-                const jpy = Math.round(t.amount);
-                
-                const el = document.createElement('div');
-                el.className = 'bg-white border border-earth-100 p-4 rounded-xl mb-3 shadow-sm flex items-center justify-between';
-                el.innerHTML = `
-                    <div class="flex items-center gap-2">
-                         <div class="font-bold text-earth-800">${t.from}</div>
-                         <i class="fa-solid fa-arrow-right text-sage-500 text-sm"></i>
-                         <div class="font-bold text-earth-800">${t.to}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-lg font-bold text-earth-900">NT$ ${twd.toLocaleString()}</div>
-                        <div class="text-xs text-earth-400">¥ ${jpy.toLocaleString()}</div>
-                    </div>
-                `;
+                const twd = Math.round(t.amount * rate); const jpy = Math.round(t.amount);
+                const el = document.createElement('div'); el.className = 'bg-white border border-earth-100 p-4 rounded-xl mb-3 shadow-sm flex items-center justify-between';
+                el.innerHTML = `<div class="flex items-center gap-2"><div class="font-bold text-earth-800">${t.from}</div><i class="fa-solid fa-arrow-right text-sage-500 text-sm"></i><div class="font-bold text-earth-800">${t.to}</div></div><div class="text-right"><div class="text-lg font-bold text-earth-900">NT$ ${twd.toLocaleString()}</div><div class="text-xs text-earth-400">¥ ${jpy.toLocaleString()}</div></div>`;
                 resultContainer.appendChild(el);
             });
         }
 
-        // Initialize
         init();
-
     </script>
 </body>
 </html>
